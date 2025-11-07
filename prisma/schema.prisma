@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatar       String?
+  bio          String?
+  location     String?
+  interests    String[]
+  skills       String[]
+  goals        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  sentConnections     Connection[] @relation("SentConnections")
+  receivedConnections Connection[] @relation("ReceivedConnections")
+  sentMessages        Message[]    @relation("SentMessages")
+  receivedMessages    Message[]    @relation("ReceivedMessages")
+  likesGiven          Like[]       @relation("LikesGiven")
+  likesReceived       Like[]       @relation("LikesReceived")
+  photos              Photo[]
+
+  @@index([email])
+  @@index([location])
+}
+
+model Connection {
+  id         String           @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  // Relations
+  fromUser User @relation("SentConnections", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ReceivedConnections", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  fromUser User @relation("SentMessages", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ReceivedMessages", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([createdAt])
+}
+
+model Like {
+  id         String   @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  fromUser User @relation("LikesGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("LikesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+model Photo {
+  id        String   @id @default(uuid())
+  userId    String
+  url       String
+  filename  String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([order])
+}
